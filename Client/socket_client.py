@@ -11,7 +11,6 @@ class Client:
 
     def __new__(cls):
         if cls._instance is None:
-
             cls._instance = super().__new__(cls)
             cls._instance.server_ip = str(os.getenv('RADIT_IP'))
             cls._instance.server_address = (cls._instance.server_ip, 12345)
@@ -20,6 +19,7 @@ class Client:
         return cls._instance
 
     def start(self):
+        print("socket started")
         self.client_socket.connect(self.server_address)
 
         receive_thread = threading.Thread(
@@ -63,8 +63,3 @@ class Client:
     def crack_pin(self):
         print("Cracking PIN...")
         # Call function to crack PIN
-
-
-if __name__ == "__main__":
-    client = Client()
-    client.start()
