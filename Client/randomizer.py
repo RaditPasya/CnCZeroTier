@@ -1,16 +1,34 @@
 import random
 
-def randomizer(panjang_digit, jumlah=3):
-    if panjang_digit <= 0 or panjang_digit > 3:
-        raise ValueError("Panjang digit harus antara 1 dan 3")
-    
-    max_value = 10**panjang_digit - 1
-    min_value = 0
 
-    if jumlah > (max_value - min_value + 1):
-        raise ValueError(f"Jumlah maksimum untuk panjang digit {panjang_digit} adalah {(max_value - min_value + 1)}")
+class Randomizer:
+    def __init__(self):
+        self.generated_numbers = set()
 
-    random_numbers = random.sample(range(min_value, max_value + 1), jumlah)
-    random_strings = [str(num).zfill(panjang_digit) for num in random_numbers]
-    
-    return random_strings
+    def randomize(self, min_value, max_value, jumlah_angka_return=1):
+        if min_value >= max_value:
+            print(min_value, max_value)
+            raise ValueError("min_value harus lebih kecil dari max_value")
+
+        total_possible_numbers = max_value - min_value + 1
+
+        if jumlah_angka_return > total_possible_numbers:
+            print(
+                f"Jumlah maksimum untuk rentang {min_value} hingga {max_value} adalah {total_possible_numbers}")
+            return [-1]
+
+        if jumlah_angka_return > total_possible_numbers - len(self.generated_numbers):
+            print("Tidak cukup angka yang unik tersedia.")
+            return [-1]
+
+        random_numbers = []
+        while len(random_numbers) < jumlah_angka_return:
+            num = random.randint(min_value, max_value)
+            if num not in self.generated_numbers:
+                self.generated_numbers.add(num)
+                random_numbers.append(num)
+
+        return random_numbers
+
+    def reset(self):
+        self.generated_numbers = set()

@@ -18,7 +18,7 @@ def get_self_ip():
                 ip_address = match.group(1)
                 break
     if ip_address:
-        print(f"Found IPv4 Address: {ip_address}")
+        # print(f"Found IPv4 Address: {ip_address}")
         return ip_address
     else:
         print("IPv4 Address not found for Wireless LAN adapter Wi-Fi")

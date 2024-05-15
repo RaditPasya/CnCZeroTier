@@ -4,6 +4,7 @@ import os
 import signal
 from dotenv import load_dotenv
 import scan_wifi
+from randomizer import Randomizer
 
 
 class Client:
@@ -21,6 +22,10 @@ class Client:
             cls._instance.stop_event = threading.Event()  # Initialize stop_event
             cls._instance.receive_thread = None  # Initialize receive_thread
             cls._instance.is_idle = True
+            cls._instance.on_cracking = False
+            cls._instance.randomizer = Randomizer()
+            cls._instance.total_numbers_generated = 0
+            cls._instance.total_numbers_to_generate = 0
 
         return cls._instance
 
@@ -63,18 +68,38 @@ class Client:
         command = command.lower()
         if command == "check idle":
             self.checking_idle()
-        elif command == "scan wifi":
-            self.scan_wifi()
-        elif command == "crack pin":
-            self.crack_pin()
-        elif command == "stop client":
-            self.stop()
-        elif command == "start process":
-            self._instance.is_idle = False
         elif command == "end process":
             self._instance.is_idle = True
+            self._instance.on_cracking = False
+            self.randomizer.reset()
+            print("process ended")
         else:
-            print("Invalid command.")
+            if self._instance.is_idle:
+                if command == "scan wifi":
+                    self.scan_wifi()
+                elif command.startswith("start cracking"):
+                    print("process started")
+                    self._instance.is_idle = False
+                    text = command.split()
+                    if len(text) >= 6:
+                        try:
+                            start_num = int(text[3])
+                            end_num = int(text[5])
+                            self._instance.total_numbers_to_generate = end_num - start_num
+                            self.crack_pin(start_num, end_num)
+                        except ValueError:
+                            print(
+                                "Invalid numbers provided for cracking range.")
+                    else:
+                        print("Invalid start cracking command format.")
+                elif command == "stop client":
+                    self.stop()
+                # elif command == "start process":
+                #     self._instance.is_idle = False
+                else:
+                    print("Invalid command.")
+            else:
+                print("busy")
 
     def checking_idle(self):
         print("Checking idle...")
@@ -90,6 +115,15 @@ class Client:
 
         # Implement the function to scan WiFi
 
-    def crack_pin(self):
+    def crack_pin(self, start_num, end_num):
         print("Cracking PIN...")
+        print(f'randomize from {start_num} to {end_num}')
+        self._instance.on_cracking = True
+        while (self._instance.total_numbers_generated < self._instance.total_numbers_to_generate and self._instance.on_cracking):
+            numbers = self.randomizer.randomize(start_num, end_num)
+            print(numbers[0])
+            self.send_message_to(f'crack {numbers[0]}\n')
+            self._instance.total_numbers_generated += 1
+        self._instance.total_numbers_generated = 0
+        self._instance.total_numbers_to_generate = 0
         # Implement the function to crack PIN
