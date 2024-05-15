@@ -3,6 +3,7 @@ import threading
 import os
 import signal
 from dotenv import load_dotenv
+import scan_wifi
 
 
 class Client:
@@ -78,11 +79,15 @@ class Client:
     def checking_idle(self):
         print("Checking idle...")
         status = "IDLE" if self._instance.is_idle else "NOT IDLE"
-        self.send_message_to(f'{self._instance.self_ip} is {status}')
+        self.send_message_to(f'{status}')
         # Implement the function to check idle
 
     def scan_wifi(self):
         print("Scanning WiFi...")
+        result = scan_wifi.scan_wifi()
+        message = f'{self.self_ip} consists of {" and ".join(result)}'
+        self.send_message_to(message)
+
         # Implement the function to scan WiFi
 
     def crack_pin(self):
