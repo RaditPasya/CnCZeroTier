@@ -1,4 +1,8 @@
-from server_actions import client_names
+from server_actions import client_names, receive_message_from_client
+from shared_data import client_response_queue
+from shared_data import wifi_list_queue
+
+
 
 def handle_client(client_socket, client_address, clients):
     client_name = client_names.get(client_address[0], 'Unknown')  # Get the name corresponding to the client's IP address
@@ -7,11 +11,18 @@ def handle_client(client_socket, client_address, clients):
             data = client_socket.recv(1024)
             if not data:
                 break
-            print(f"\n\nMessage from [ {client_name} ]: {data.decode()}")
-            # Broadcast the message to other clients
-            # for client in clients:
-            #     if client != client_socket:
-            #         client.sendall(data)
+            message = data.decode()
+            #print(f"\n\nMessage from [ {client_name} ]: {message}")
+
+            # Check if the message is related to "Check Idle" or "Scan wifi"
+            if message == "IDLE" or message == "NOT IDLE":
+                print(">>>>>",client_name, "Is Idle<<<<<")
+                client_response_queue.put((client_socket, message))
+                
+            if "consists of" in message:
+                print(f">>>>>{client_name} sent their wifi scan<<<<<")
+                wifi_list_queue.put((client_socket, message))
+
         except ConnectionResetError:
             break
 
