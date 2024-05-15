@@ -22,25 +22,42 @@ clients = []
 
 print('Radit server is listening...')
 
-try:
-    while True:
-        # Wait for a connection
-        client_socket, client_address = server_socket.accept()
-        client_name = client_names.get(client_address[0], 'Unknown')
-        print(f"Connection from {client_name}")
-        
-        # Add the client socket to the list of clients
-        clients.append(client_socket)
-        
-        # Create a thread to handle the client
-        client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address, clients))
-        client_thread.start()
+# Flag to control the server loop
+running = True
 
-        # Restart listen_for_input thread with updated clients array
-        input_thread = threading.Thread(target=listen_for_input, args=(server_socket, clients, client_names))
-        input_thread.start()
-        input_thread.join()  # Wait for the thread to finish before proceeding
+def server_shutdown():
+    global running
+    running = False
+    for client_socket in clients:
+        client_socket.close()
+    server_socket.close()
+
+try:
+    # Start the input listener in a separate thread
+    input_thread = threading.Thread(target=listen_for_input, args=(server_socket, clients, client_names, server_shutdown))
+    input_thread.start()
+
+    while running:
+        try:
+            # Wait for a connection
+            client_socket, client_address = server_socket.accept()
+            client_name = client_names.get(client_address[0], 'Unknown')
+            print(f"Connection from {client_name}")
+            
+            # Add the client socket to the list of clients
+            clients.append(client_socket)
+            
+            # Create a thread to handle the client
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address, clients))
+            client_thread.start()
+        except OSError:
+            # This will catch the error when the socket is closed
+            break
 
 except KeyboardInterrupt:
     print("\nServer interrupted. Closing...")
-    server_socket.close()
+    server_shutdown()
+
+# Ensure the input thread finishes before exiting
+input_thread.join()
+print("Server has shut down.")
