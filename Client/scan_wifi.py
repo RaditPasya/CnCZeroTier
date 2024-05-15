@@ -46,15 +46,17 @@ def scan_wifi():
                 if len(columns) == 3 and columns[2] == "dynamic":
                     dynamic_addresses.append(columns[1])
 
-        if dynamic_addresses:
-            print(f"Dynamic physical addresses for interface {ip_address}:")
-            for address in dynamic_addresses:
-                print(address)
-        else:
-            print(
-                f"No dynamic physical addresses found for interface {ip_address}")
+        # if dynamic_addresses:
+        #     print(f"Dynamic physical addresses for interface {ip_address}:")
+        #     for address in dynamic_addresses:
+        #         print(address)
+        # else:
+        #     print(
+        #         f"No dynamic physical addresses found for interface {ip_address}")
+        return dynamic_addresses
     else:
         print("Could not determine the self IP address.")
+        return []
 
 
 scan_wifi()
