@@ -17,12 +17,12 @@ def send_message_to_clients(message, clients):
         except Exception as e:
             print(f"Error sending message to client: {e}")
 
-def listen_for_input(server_socket, clients, client_names):
+def listen_for_input(server_socket, clients, client_names, shutdown_callback):
     while True:
         try:
-            user_input = input("Enter 1 to send a message to all clients, 2 to show all current connected clients, or 0 to shut down the server: ")
+            user_input = input("\n 1 - Send Command\n 2 - Show all connected Clients\n\n 0 - Shutdown\n================================\nEnter your choice: ")
             if user_input == '1':
-                secondary_input = input("Enter 1 to send 'check idle' to all clients, or 0 to send 'stop client' to all clients: ")
+                secondary_input = input("\n1 - check idle\n\n0 - stop client\n================================\\nEnter your choice: ")
                 if secondary_input == '1':
                     send_message_to_clients("check idle", clients)
                 elif secondary_input == '0':
@@ -37,14 +37,11 @@ def listen_for_input(server_socket, clients, client_names):
                     print(f"{client_name} ({client_address})")
             elif user_input == '0':
                 print("Shutting down the server...")
-                for client_socket in clients:
-                    client_socket.close()
-                server_socket.close()
+                shutdown_callback()
                 break
             else:
                 print("Invalid input, please try again.")
         except KeyboardInterrupt:
             print("\nServer interrupted. Closing...")
-            server_socket.close()
+            shutdown_callback()
             break
-
