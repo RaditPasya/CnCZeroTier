@@ -2,8 +2,26 @@ import random
 
 
 class Randomizer:
-    def __init__(self):
+    def __init__(self, start_num, end_num):
+        self._start_num = start_num
+        self._end_num = end_num
         self.generated_numbers = set()
+
+    @property
+    def start_num(self):
+        return self._start_num
+
+    @start_num.setter
+    def start_num(self, value):
+        self._start_num = value
+
+    @property
+    def end_num(self):
+        return self._end_num
+
+    @end_num.setter
+    def end_num(self, value):
+        self._end_num = value
 
     def randomize(self, min_value, max_value, jumlah_angka_return=1):
         if min_value >= max_value:

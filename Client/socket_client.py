@@ -23,7 +23,7 @@ class Client:
             cls._instance.receive_thread = None  # Initialize receive_thread
             cls._instance.is_idle = True
             cls._instance.on_cracking = False
-            cls._instance.randomizer = Randomizer()
+            cls._instance.randomizer = Randomizer(0, 0)
             cls._instance.total_numbers_generated = 0
             cls._instance.total_numbers_to_generate = 0
 
@@ -66,13 +66,11 @@ class Client:
 
     def process_command(self, command):
         command = command.lower()
+        print(f'command received : {command}')
         if command == "check idle":
             self.checking_idle()
         elif command == "end process":
-            self._instance.is_idle = True
-            self._instance.on_cracking = False
-            self.randomizer.reset()
-            print("process ended")
+            self.end_process()
         else:
             if self._instance.is_idle:
                 if command == "scan wifi":
@@ -86,10 +84,11 @@ class Client:
                             start_num = int(text[3])
                             end_num = int(text[5])
                             self._instance.total_numbers_to_generate = end_num - start_num
-                            self.crack_pin(start_num, end_num)
-                        except ValueError:
+                            self.start_crack_pin(start_num, end_num)
+                        except ValueError as e:
                             print(
                                 "Invalid numbers provided for cracking range.")
+                            print(e)
                     else:
                         print("Invalid start cracking command format.")
                 elif command == "stop client":
@@ -98,8 +97,20 @@ class Client:
                 #     self._instance.is_idle = False
                 else:
                     print("Invalid command.")
+            elif command == "crack retry":
+                self.attempt_crack_pin()
             else:
                 print("busy")
+
+    def end_process(self):
+        self._instance.is_idle = True
+        self._instance.on_cracking = False
+        self.randomizer.reset()
+        self.randomizer.start_num = 0
+        self.randomizer.end_num = 0
+        self._instance.total_numbers_generated = 0
+        self._instance.total_numbers_to_generate = 0
+        print("process ended")
 
     def checking_idle(self):
         print("Checking idle...")
@@ -115,15 +126,30 @@ class Client:
 
         # Implement the function to scan WiFi
 
-    def crack_pin(self, start_num, end_num):
+    def start_crack_pin(self, start_num, end_num):
         print("Cracking PIN...")
         print(f'randomize from {start_num} to {end_num}')
         self._instance.on_cracking = True
-        while (self._instance.total_numbers_generated < self._instance.total_numbers_to_generate and self._instance.on_cracking):
-            numbers = self.randomizer.randomize(start_num, end_num)
-            print(numbers[0])
+        self.randomizer.start_num = start_num
+        self.randomizer.end_num = end_num
+        self._instance.total_numbers_generated = 0
+        numbers = self.randomizer.randomize(start_num, end_num)
+        print(f'send number : {numbers[0]}')
+        self.send_message_to(f'crack {numbers[0]}\n')
+        self._instance.total_numbers_generated += 1
+
+    def attempt_crack_pin(self):
+        print(
+            f'current generated : {self._instance.total_numbers_generated}, max generated : {self._instance.total_numbers_to_generate}')
+        if (self._instance.total_numbers_generated < self._instance.total_numbers_to_generate):
+            print("Attemping crack PIN...")
+            print(
+                f'randomize from {self.randomizer.start_num} to {self.randomizer.end_num}')
+            numbers = self.randomizer.randomize(
+                self.randomizer.start_num, self.randomizer.end_num)
+            print(f'send number : {numbers[0]}')
             self.send_message_to(f'crack {numbers[0]}\n')
             self._instance.total_numbers_generated += 1
-        self._instance.total_numbers_generated = 0
-        self._instance.total_numbers_to_generate = 0
-        # Implement the function to crack PIN
+        else:
+            print("All possible numbers had generated")
+            self.end_process()
