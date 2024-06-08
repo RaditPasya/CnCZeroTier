@@ -14,8 +14,19 @@ class Client:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.server_ip = str(os.getenv('SERVER_IP'))
-            cls._instance.self_ip = str(os.getenv('SELF_IP'))
+
+            # Load environment variables
+            cls._instance.server_ip = os.getenv('SERVER_IP')
+            cls._instance.self_ip = os.getenv('SELF_IP')
+
+            # Check if SERVER_IP is not provided
+            if cls._instance.server_ip is None:
+                raise ValueError(
+                    "SERVER_IP is not set in environment variables")
+
+            # Continue with the rest of the initialization
+            cls._instance.server_ip = str(cls._instance.server_ip)
+            cls._instance.self_ip = str(cls._instance.self_ip)
             cls._instance.server_address = (cls._instance.server_ip, 12345)
             cls._instance.client_socket = socket.socket(
                 socket.AF_INET, socket.SOCK_STREAM)
