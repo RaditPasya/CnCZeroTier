@@ -14,7 +14,7 @@ class Client:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.server_ip = str(os.getenv('RADIT_IP'))
+            cls._instance.server_ip = str(os.getenv('SERVER_IP'))
             cls._instance.self_ip = str(os.getenv('SELF_IP'))
             cls._instance.server_address = (cls._instance.server_ip, 12345)
             cls._instance.client_socket = socket.socket(
@@ -26,13 +26,14 @@ class Client:
             cls._instance.randomizer = Randomizer(0, 0)
             cls._instance.total_numbers_generated = 0
             cls._instance.total_numbers_to_generate = 0
+            cls._instance.current_number = 0
 
         return cls._instance
 
     def start(self):
         print("Socket started")
         self.client_socket.connect(self.server_address)
-
+        print(f'connected to : {self.server_address}')
         self.receive_thread = threading.Thread(
             target=self.receive_messages, args=(self.client_socket,))
         self.receive_thread.start()
@@ -98,7 +99,10 @@ class Client:
                 else:
                     print("Invalid command.")
             elif command == "crack retry":
-                self.attempt_crack_pin()
+                self.send_number()
+            elif command == "wrong":
+                self.generate_new_number()
+                self.send_number()
             else:
                 print("busy")
 
@@ -133,23 +137,27 @@ class Client:
         self.randomizer.start_num = start_num
         self.randomizer.end_num = end_num
         self._instance.total_numbers_generated = 0
-        numbers = self.randomizer.randomize(start_num, end_num)
-        print(f'send number : {numbers[0]}')
-        self.send_message_to(f'crack {numbers[0]}\n')
+        self._instance.current_number = self.randomizer.randomize(start_num, end_num)[
+            0]
+        print(f'send number : {self._instance.current_number}')
+        self.send_message_to(f'crack {self._instance.current_number}\n')
         self._instance.total_numbers_generated += 1
 
-    def attempt_crack_pin(self):
+    def generate_new_number(self):
         print(
             f'current generated : {self._instance.total_numbers_generated}, max generated : {self._instance.total_numbers_to_generate}')
         if (self._instance.total_numbers_generated < self._instance.total_numbers_to_generate):
             print("Attemping crack PIN...")
             print(
                 f'randomize from {self.randomizer.start_num} to {self.randomizer.end_num}')
-            numbers = self.randomizer.randomize(
-                self.randomizer.start_num, self.randomizer.end_num)
-            print(f'send number : {numbers[0]}')
-            self.send_message_to(f'crack {numbers[0]}\n')
+            self._instance.current_number = self.randomizer.randomize(
+                self.randomizer.start_num, self.randomizer.end_num)[0]
+            print(f'generated number : {self._instance.current_number}')
             self._instance.total_numbers_generated += 1
         else:
             print("All possible numbers had generated")
             self.end_process()
+
+    def send_number(self):
+        print(f'send number : {self._instance.current_number}')
+        self.send_message_to(f'crack {self._instance.current_number}\n')
