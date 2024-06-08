@@ -3,8 +3,10 @@ from dotenv import load_dotenv
 import select
 from shared_data import client_response_queue
 from shared_data import wifi_list_queue
+from shared_data import cracking_queue
 import time
 import random
+import re
 
 load_dotenv()
 
@@ -15,6 +17,8 @@ client_names = {
     os.getenv('RADIT_IP'): os.getenv('RADIT_NAME'),
     os.getenv('RAIHAN_IP'): os.getenv('RAIHAN_NAME')
 }
+
+
 
 def send_message_to_clients(message, clients):
     for client_socket in clients:
@@ -67,15 +71,53 @@ def handle_scan_wifi(idle_clients):
 
 def handle_crack_pin(idle_clients):
     pin = generate_pin()
+    print("THE PIN IS", pin)
     total_clients = len(idle_clients)
     intervals = distribute(total_clients)
     send_intervals_to_clients(idle_clients, intervals)
+    
+    found = False
+    start_time = time.time()
+    
+    while not found:
+        while not cracking_queue.empty():
+            client_socket, message = cracking_queue.get()
+            last_client_socket = client_socket
+
+            # Check if the message is in the form "crack [int]"
+            if not re.match(r"^crack \d+$", message):
+                continue  # Skip to the next message if the format doesn't match
+            
+            crack = message.split()
+            if int(crack[1]) == pin:
+                send_message_to_clients("end process", idle_clients)
+                client_address = client_socket.getpeername()
+                client_name = client_names.get(client_address[0], 'Unknown')
+                os.system('cls')
+                print(f"{client_name} Found it!")
+                found = True
+                break
+            else:
+                # Send the message "Wrong" to the client who made the guess
+                client_socket.sendall(b"Crack retry")
+                client_address = client_socket.getpeername()
+                client_name = client_names.get(client_address[0], 'Unknown')
+                # Print the message "[Client name] - [the guess number] - is wrong"
+                print(f"{client_name} - {int(crack[1])} - is wrong")
+                
+        if time.time() - start_time >= 3 and not found:
+            if last_client_socket:
+                last_client_socket.sendall(b"Crack retry")
+            start_time = time.time()  # Reset the timer
+        
+    
+    return
     
 def send_intervals_to_clients(idle_clients, intervals):
     for i, client_socket in enumerate(idle_clients):
         if i < len(intervals):
             start, end = intervals[i]
-            message = f"Your interval is from {start} to {end}"
+            message = f"Start cracking from {start} to {end}"
             try:
                 client_socket.sendall(message.encode())
                 print(f"Sent to client[{i}]: {message}")
@@ -115,24 +157,30 @@ def process_client_responses():
 def listen_for_input(server_socket, clients, client_names, shutdown_callback):
     while True:
         try:
+            
             user_input = input("\n 1 - Send Command\n 2 - Show all connected Clients\n\n 0 - Shutdown\n================================\nEnter your choice: ")
             if user_input == '1':
-                secondary_input = input("\n 1 - Scan Wifi\n2 - Crack pin\n 3 - send custom message\n\n 0 - stop client\n================================\nEnter your choice: ")
+                secondary_input = input("\n 1 - Scan Wifi\n 2 - Crack pin\n 3 - send custom message\n\n 0 - stop client\n================================\nEnter your choice: ")
                 if secondary_input == '1':
                     idle_clients = handle_check_idle(clients)
                     print("Idle clients:", [client_names.get(client_socket.getpeername()[0], 'Unknown') for client_socket in idle_clients])
                     
                     if idle_clients:
+                        os.system('cls')
                         wifi_lists = handle_scan_wifi(idle_clients)
                         print("\n\nWifi lists from idle clients:")
                         for wifi_list in wifi_lists:
                             print(wifi_list)
                     else:
+                        os.system('cls')
                         print("No idle clients found.")
                         
                         
                 elif secondary_input == '2':
+                    os.system('cls')
                     idle_clients = handle_check_idle(clients)
+                    
+
                     print("Idle clients:", [client_names.get(client_socket.getpeername()[0], 'Unknown') for client_socket in idle_clients])
                     
                     
@@ -149,6 +197,7 @@ def listen_for_input(server_socket, clients, client_names, shutdown_callback):
                 else:
                     print("Invalid input, please try again.")
             elif user_input == '2':
+                os.system('cls')
                 print("Current connected clients:")
                 for client_socket in clients:
                     client_address = client_socket.getpeername()

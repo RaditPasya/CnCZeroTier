@@ -4,3 +4,5 @@ from queue import Queue
 client_response_queue = Queue()
 
 wifi_list_queue = Queue()
+
+cracking_queue = Queue()

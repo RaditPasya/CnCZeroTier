@@ -1,6 +1,8 @@
 from server_actions import client_names, receive_message_from_client
 from shared_data import client_response_queue
 from shared_data import wifi_list_queue
+from shared_data import cracking_queue
+import re
 
 
 
@@ -22,6 +24,9 @@ def handle_client(client_socket, client_address, clients):
             if "consists of" in message:
                 print(f">>>>>{client_name} sent their wifi scan<<<<<")
                 wifi_list_queue.put((client_socket, message))
+                
+            if re.match(r'^crack \d{3}$', message):
+                cracking_queue.put((client_socket, message))
 
         except ConnectionResetError:
             break
