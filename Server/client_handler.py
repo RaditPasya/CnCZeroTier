@@ -14,6 +14,7 @@ def handle_client(client_socket, client_address, clients):
             if not data:
                 break
             message = data.decode()
+            
             #print(f"\n\nMessage from [ {client_name} ]: {message}")
 
             # Check if the message is related to "Check Idle" or "Scan wifi"
@@ -25,7 +26,8 @@ def handle_client(client_socket, client_address, clients):
                 print(f">>>>>{client_name} sent their wifi scan<<<<<")
                 wifi_list_queue.put((client_socket, message))
                 
-            if re.match(r'^crack \d{3}$', message):
+            if re.match(r'^crack \d{1,3}$', message):
+                print(message)
                 cracking_queue.put((client_socket, message))
 
         except ConnectionResetError:

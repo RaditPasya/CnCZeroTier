@@ -1,18 +1,31 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import socket
 import threading
 from client_handler import handle_client
 from server_actions import listen_for_input, client_names
 
+# Check if the .env file exists
+if not find_dotenv():
+    print("Please set the server IP in the .env file, according to ZeroTier IP Assignments")
+    exit(1)
+
 # Load environment variables from .env file
 load_dotenv()
+
+# Get the server IP from the environment variables
+server_ip = os.getenv('RADIT_IP')
+
+# Check if the server IP is set
+if server_ip is None:
+    print("Please set the server IP in the .env file, according to ZeroTier IP Assignments")
+    exit(1)
 
 # Create a TCP/IP socket
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Bind the socket to the address and port
-server_address = (os.getenv('RADIT_IP'), 12345)
+server_address = (server_ip, 12345)
 server_socket.bind(server_address)
 
 # Listen for incoming connections
@@ -42,16 +55,13 @@ try:
             # Wait for a connection
             client_socket, client_address = server_socket.accept()
             client_name = client_names.get(client_address[0], 'Unknown')
-            print(f"Connection from {client_name}")
+            print(f"\nConnection from {client_name}")
             
-            # Add the client socket to the list of clients
             clients.append(client_socket)
             
-            # Create a thread to handle the client
             client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address, clients))
             client_thread.start()
         except OSError:
-            # This will catch the error when the socket is closed
             break
 
 except KeyboardInterrupt:

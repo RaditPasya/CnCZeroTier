@@ -6,7 +6,10 @@ from shared_data import wifi_list_queue
 from shared_data import cracking_queue
 import time
 import random
+from threading import Timer
 import re
+from queue import Queue, Empty
+
 
 load_dotenv()
 
@@ -77,12 +80,23 @@ def handle_crack_pin(idle_clients):
     send_intervals_to_clients(idle_clients, intervals)
     
     found = False
-    start_time = time.time()
     
+    # Define the retry function to send a retry message
+    def retry_clients():
+        send_message_to_clients("Crack retry", idle_clients)
+    
+    # Initialize the timer
+    timer = Timer(5, retry_clients)
+    timer.start()
+
     while not found:
-        while not cracking_queue.empty():
-            client_socket, message = cracking_queue.get()
-            last_client_socket = client_socket
+        try:
+            client_socket, message = cracking_queue.get(timeout=1)  # Use timeout to periodically check the queue
+
+            # Reset the timer every time a new message is received
+            timer.cancel()
+            timer = Timer(5, retry_clients)
+            timer.start()
 
             # Check if the message is in the form "crack [int]"
             if not re.match(r"^crack \d+$", message):
@@ -93,24 +107,22 @@ def handle_crack_pin(idle_clients):
                 send_message_to_clients("end process", idle_clients)
                 client_address = client_socket.getpeername()
                 client_name = client_names.get(client_address[0], 'Unknown')
-                os.system('cls')
+                os.system('cls' if os.name == 'nt' else 'clear')
                 print(f"{client_name} Found it!")
                 found = True
+                timer.cancel()  # Stop the timer since the pin was found
                 break
             else:
                 # Send the message "Wrong" to the client who made the guess
-                client_socket.sendall(b"Crack retry")
+                client_socket.sendall(b"Wrong")
                 client_address = client_socket.getpeername()
                 client_name = client_names.get(client_address[0], 'Unknown')
-                # Print the message "[Client name] - [the guess number] - is wrong"
                 print(f"{client_name} - {int(crack[1])} - is wrong")
-                
-        if time.time() - start_time >= 3 and not found:
-            if last_client_socket:
-                last_client_socket.sendall(b"Crack retry")
-            start_time = time.time()  # Reset the timer
         
-    
+        except Empty:
+            # This will be hit every 1 second if the queue is empty
+            pass
+
     return
     
 def send_intervals_to_clients(idle_clients, intervals):
